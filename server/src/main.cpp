@@ -164,7 +164,9 @@ void waitUntilFinish()
 
 vector<double> enviaParas()
 {
-	fstream in_("gen.ga");
+	fstream in_("point.txt");
+	int nvar;
+	in_ >> nvar;
         vector<double> params(paramsNumber);
         for (int i=0; i<paramsNumber; i++)
         {
@@ -240,111 +242,32 @@ int main()
 	string fitness;
 	ofstream fitGa_;
 	ofstream restart_;
-	bool trySocketAgain = true;
-	if (!is_file_exist("restartEnd.ga"))
-	{
-		while(trySocketAgain)
-		{
-			try
-			{
-				ClientSocket client_socket("localhost", 30000);
-				try
-				{
-					client_socket << "r";
-					if (is_file_exist("univariate.ga"))
-					{
-						client_socket >> fitness;
-					}
-					else
-					{
-						client_socket >> fitness;
-						ifstream pass_("rindo-multi-pass.txt");
-						for(int i=0; i<molNumber; i++)
-						{
-							pass_ >> allFit[i];
-						}
-						pass_.close();
-						remove("rindo-multi-pass.txt");
-					}
-				}
-				catch (SocketException&) {}
-	
-			}
-			catch (SocketException& e)
-			{
-				std::cout << "Exception was caught:" << e.description() << "\n";
-				sleep(0.001);
-			}
-	
-			fitGa_.open("fitness.ga");
-			if (is_file_exist("univariate.ga"))
-			{
-				fitGa_ << fitness << endl;
-			}
-			else
-			{
-				for(int i=0; i<molNumber; i++)
-				{
-					fitGa_ << allFit[i] << endl;
-				}
-			}
+	defineRindoRef();
+	defineRefData();
 
-			fitGa_.close();
-			trySocketAgain = false;
-			cout << "pegou:  " << fitness << endl;
-		}
-	}
-	else
-	{
-		// essa parte e quando os pontos esgotarem
-		defineRindoRef();
-		defineRefData();
+	vector<double> genParams = enviaParas();
 
-		vector<double> genParams = enviaParas();
+	runAll(molNumber);
+	waitUntilFinish();
 
-		runAll(molNumber);
-		waitUntilFinish();
+	lerPontoFit(molNumber);
 
-		lerPontoFit(molNumber);
+	double auxfitness = pontoVectorMediana(molNumber);
+	stringstream convert;
+	convert << setprecision(16) << auxfitness;
+	convert >> fitness;
+	fitGa_.open("fitness.txt");
+	fitGa_ << fitness << endl;
+	fitGa_.close();
 
-		double auxfitness = pontoVectorMediana(molNumber);
-		stringstream convert;
-		convert << setprecision(16) << auxfitness;
-		convert >> fitness;
-		if (is_file_exist("univariate.ga"))
-		{
-			fitGa_.open("fitness.ga");
-			fitGa_ << fitness << endl;
-			fitGa_.close();
-
-			//restart_.open("restart.ga", ios_base::app);
-			//restart_ << fitness << endl;
-			//restart_.close();
-		}
-		else
-		{
-			restart_.open("restart-multi.ga",ios_base::app);
-			restart_ << fitness << "   ";
-
-			writeMultiFitness(molNumber,restart_);
-
-			for(int i=0; i<(int)genParams.size();i++)
-			{
-				restart_ << "   " << genParams[i];
-			}
-			restart_ << endl;
-			restart_.close();
-		}
-
-		system("rm slur*");
-		system("rm *.fit");
-		system(("rm " + clientPath + "*.inp").c_str());
-		system(("rm " + clientPath + "*.cis").c_str());
-		system(("rm " + clientPath + "*.prop").c_str());
-		system(("rm " + clientPath + "*.gbw").c_str());
-		system(("rm " + clientPath + "*.out").c_str());
-		system(("rm " + clientPath + "*.ges").c_str());
-	}
+	system("rm slur*");
+	system("rm *.fit");
+	system(("rm " + clientPath + "*.inp").c_str());
+	system(("rm " + clientPath + "*.cis").c_str());
+	system(("rm " + clientPath + "*.prop").c_str());
+	system(("rm " + clientPath + "*.gbw").c_str());
+	system(("rm " + clientPath + "*.out").c_str());
+	system(("rm " + clientPath + "*.ges").c_str());
 	return 0;
 }
 
